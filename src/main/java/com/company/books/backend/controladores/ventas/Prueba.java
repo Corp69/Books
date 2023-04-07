@@ -1,36 +1,31 @@
-package com.company.books.backend.controllers;
+package com.company.books.backend.controladores.ventas;
 
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonSyntaxException;
-
+import com.google.gson.*;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 @RestController
-@RequestMapping("/inventario")
+@RequestMapping("/test")
 public class Prueba {
-
+	
+	/**
+	 * @return json array para mostrar un listado de las categorias este id = 0  es el titulo de la tabla
+	 * @method TbCategorias => mostrara la tabla o listado
+	 * @throws SQLException => mostrara el error de la consulta
+	 */
 	@ResponseBody
-    @RequestMapping(value = "/test03", method = RequestMethod.GET, produces = "application/json")
-    public ArrayNode test03() throws SQLException {
-		 String url = "jdbc:postgresql://localhost:5432/Dev";
+    @RequestMapping(value = "/TbCategorias", method = RequestMethod.GET, produces = "application/json")
+    public ArrayNode TbCategorias() throws SQLException {
+		 String url = "jdbc:postgresql://localhost:5432/TEST";
 		 Connection conexion = DriverManager.getConnection(url, "postgres", "12345dev");
          Statement instruccion = conexion.createStatement();
 		try {
@@ -62,26 +57,34 @@ public class Prueba {
         }	
     }
 	
+	/**
+	 * 
+	 * @param JSON => pasamos los parametros en formato Json 
+	 * 					el metodo lo gestionara en String hay que castear a Json y Sacar los campos  Nesesarios
+	 * 
+	 * @method: guardar: Metodo donde almacena o actualiza 
+	 * 
+	 * @return Json: mostrando el resultado desde la base de datos 
+	 * @throws SQLException => mostrara el error de la consulta
+	 */
 	@ResponseBody
-	@RequestMapping(value = "/test04", method = RequestMethod.POST, produces = "application/json")
+	@RequestMapping(value = "/guardar", method = RequestMethod.POST, produces = "application/json")
 	public ObjectNode guardar( @RequestBody String  JSON) throws SQLException {
-		
-		 System.out.println(JSON);
-		 Gson gson = new Gson();
-		 JsonObject jsonObject = gson.fromJson(JSON, JsonObject.class);
-		 System.out.println(jsonObject);
-		 System.out.println(jsonObject.get("id").getAsInt());
-		
-	    var url = "jdbc:postgresql://localhost:5432/Dev";
+		Gson gson = new Gson();
+		JsonObject jsonObject = gson.fromJson(JSON, JsonObject.class);
+		var url = "jdbc:postgresql://localhost:5432/TEST";
 	    ObjectNode respuesta = JsonNodeFactory.instance.objectNode();
 	    Connection conexion = DriverManager.getConnection(url, "postgres", "12345dev");
         Statement instruccion = conexion.createStatement();
 	    if( jsonObject.get("id").getAsInt() < 1) 
 	    {
 	    	try {
-	            String sql = "insert into categorias (id,nombre, descripcion) values (22,'TERROR',' EL AMANECER OBSCURO')";
+	            String sql = "insert into categorias (id,nombre, descripcion) "
+	            		+ "values ("
+	            		+ "(select max(id) + 1 from categorias),'"
+	            		+ jsonObject.get("nombre").getAsString().toString() +"','" 
+	            		+ jsonObject.get("descripcion").getAsString().toString() +"')";
 	      	   	int resultado = instruccion.executeUpdate(sql);
-	    	    System.out.println(resultado);
 	    	    respuesta.put("Modulo:", "Categorias");
 	    	    respuesta.put("Titulo:", "Nueva Categoria");
 	    	    respuesta.put("Detalle:", "Agregada Correctamente");
@@ -91,7 +94,6 @@ public class Prueba {
 	        }catch (SQLException ex) {
 	        	instruccion.close();                                              
 	            conexion.close();
-	            ex.printStackTrace(System.out);
 	            respuesta.put("Modulo:", "Categoria");
 	            respuesta.put("Detalle Del Error:", ex.toString());
 	            return respuesta;
@@ -99,9 +101,11 @@ public class Prueba {
 	    }
 	    else {
 	    	try {
-	            String sql = "UPDATE categorias SET nombre = '999999', descripcion = 'xxx999999' WHERE id ="+ jsonObject.get("id").getAsInt();
+	    		String sql = "UPDATE categorias SET "
+	    				+ "nombre = '"+  jsonObject.get("nombre").getAsString().toString() + "', "
+	    				+ "descripcion = '" + jsonObject.get("descripcion").getAsString().toString() +  "' "
+	    				+ "WHERE id = "+ jsonObject.get("id").getAsInt();
 	      	   	int resultado = instruccion.executeUpdate(sql);
-	    	    System.out.println(resultado);
 	    	    respuesta.put("Modulo:", "Categorias");
 	    	    respuesta.put("Titulo:", "Modificacion");
 	    	    respuesta.put("Detalle:", "Actualizada Correctamente");
@@ -119,24 +123,29 @@ public class Prueba {
 	    }        
 }
 	
+	/**
+	 * 
+	 * @param JSON: pasamos un json cuya estructura sera { "id": "1"} para eliminar la fila nesesaria 
+	 * @return JSON: devolvera un Json {"Modulo:", "Categoria", "Detalle:", " se elimino"  } 
+	 * @throws SQLException: en caso de tener error mostrara el error en esta clausula
+	 */
 	@ResponseBody
-	@RequestMapping(value = "/test05", method = RequestMethod.POST, produces = "application/json")
+	@RequestMapping(value = "/eliminar", method = RequestMethod.POST, produces = "application/json")
 	public ObjectNode Eliminar( @RequestBody String  JSON) throws SQLException {
 		
-		 Gson gson = new Gson();
-		 JsonObject jsonObject = gson.fromJson(JSON, JsonObject.class);
+		Gson gson = new Gson();
+		JsonObject jsonObject = gson.fromJson(JSON, JsonObject.class);
 		
-		var url = "jdbc:postgresql://localhost:5432/Dev";
+		var url = "jdbc:postgresql://localhost:5432/TEST";
 	    ObjectNode respuesta = JsonNodeFactory.instance.objectNode();
 	    Connection conexion = DriverManager.getConnection(url, "postgres", "12345dev");
         Statement instruccion = conexion.createStatement();
 	    	try {
-	            String sql = "insert into categorias (id,nombre, descripcion) values (22,'TERROR',' EL AMANECER OBSCURO')";
+	            String sql = "delete  from categorias where id = " + jsonObject.get("id").getAsInt();
 	      	   	int resultado = instruccion.executeUpdate(sql);
-	    	    System.out.println(resultado);
 	    	    respuesta.put("Modulo:", "Categorias");
-	    	    respuesta.put("Titulo:", "Nueva Categoria");
-	    	    respuesta.put("Detalle:", "Agregada Correctamente");
+	    	    respuesta.put("Titulo:", "Eliminar Categoria");
+	    	    respuesta.put("Detalle:", "Se Elimino Correctamente");
 	            instruccion.close();                                              
 	            conexion.close();
 	            return respuesta;
@@ -149,6 +158,5 @@ public class Prueba {
 	            return respuesta;
 	        }
 	    }
-
 
 }
